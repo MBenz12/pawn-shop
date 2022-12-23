@@ -23,8 +23,8 @@ import "react-toastify/dist/ReactToastify.css";
 export default function App({ Component, pageProps }: AppProps) {
   let solanaRpc = SOLANA_RPC_URL;
   let network = WalletAdapterNetwork.Mainnet; 
-  network = WalletAdapterNetwork.Devnet;
-  solanaRpc = clusterApiUrl(network);
+  // network = WalletAdapterNetwork.Devnet;
+  // solanaRpc = clusterApiUrl(network);
   // You can also provide a custom RPC endpoint.
   const endpoint = useMemo(() => solanaRpc, [solanaRpc]);
 

@@ -125,7 +125,7 @@ pub struct CreateLoan<'info>
 #[derive(Accounts)]
 pub struct WithdrawLoan<'info>
 {
-    #[account(mut)]
+    #[account(mut, address = pawn_shop.authority)]
     pub authority: Signer<'info>,
 
     #[account(

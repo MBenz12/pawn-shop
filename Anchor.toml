@@ -1,14 +1,14 @@
 [features]
 seeds = false
 skip-lint = false
-[programs.devnet]
+[programs.mainnet]
 pawn_shop = "DR2xyqzhkQ92R5EmgyRu7mnwcdi1PsVa83tcusqKRMjX"
 
 [registry]
 url = "https://api.apr.dev"
 
 [provider]
-cluster = "devnet"
+cluster = "mainnet"
 wallet = "/home/work/.config/solana/id.json"
 
 [scripts]

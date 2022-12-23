@@ -1,4 +1,4 @@
-import { clusterApiUrl, Connection, PublicKey } from "@solana/web3.js";
+import { Connection, PublicKey } from "@solana/web3.js";
 import { Metaplex } from "@metaplex-foundation/js";
 import { PAWNSHOP_NAME, SOLANA_RPC_URL } from "config";
 import idl from "idl/pawn_shop.json";
@@ -6,8 +6,8 @@ import { getAssociatedTokenAddress } from "@solana/spl-token";
 const programId = new PublicKey(idl.metadata.address);
 
 export const getConnection = () => {
-    const rpc = clusterApiUrl('devnet');
-    return new Connection(rpc, "confirmed");
+    // const rpc = clusterApiUrl('devnet');
+    return new Connection(SOLANA_RPC_URL, "confirmed");
 };
 
 export const getMetaplex = () => {
