@@ -114,7 +114,7 @@ pub mod pawn_shop {
         let pawn_shop = &mut ctx.accounts.pawn_shop;
         let loan = &ctx.accounts.loan;
         
-        require!(loan.loan_started_time + pawn_shop.loan_period > now(), CustomError::NotFinishedPawnPeriod);
+        require!(loan.loan_started_time + pawn_shop.loan_period < now(), CustomError::NotFinishedPawnPeriod);
 
         let nft_mint = loan.nft_mint;
         let pawn_shop_key = pawn_shop.key();
