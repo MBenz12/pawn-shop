@@ -3,36 +3,6 @@
   "name": "pawn_shop",
   "instructions": [
     {
-      "name": "createVault",
-      "accounts": [
-        {
-          "name": "authority",
-          "isMut": true,
-          "isSigner": true
-        },
-        {
-          "name": "vault",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "systemProgram",
-          "isMut": false,
-          "isSigner": false
-        }
-      ],
-      "args": [
-        {
-          "name": "name",
-          "type": "string"
-        },
-        {
-          "name": "backend",
-          "type": "publicKey"
-        }
-      ]
-    },
-    {
       "name": "createPawnShop",
       "accounts": [
         {
@@ -87,6 +57,27 @@
           "type": "u64"
         }
       ]
+    },
+    {
+      "name": "drain",
+      "accounts": [
+        {
+          "name": "authority",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "pawnShop",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": []
     },
     {
       "name": "updatePawnShop",
@@ -282,22 +273,6 @@
     }
   ],
   "accounts": [
-    {
-      "name": "Vault",
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "name",
-            "type": "string"
-          },
-          {
-            "name": "bump",
-            "type": "u8"
-          }
-        ]
-      }
-    },
     {
       "name": "PawnShop",
       "type": {

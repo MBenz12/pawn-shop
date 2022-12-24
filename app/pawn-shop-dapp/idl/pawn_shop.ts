@@ -3,36 +3,6 @@ export type PawnShop = {
   "name": "pawn_shop",
   "instructions": [
     {
-      "name": "createVault",
-      "accounts": [
-        {
-          "name": "authority",
-          "isMut": true,
-          "isSigner": true
-        },
-        {
-          "name": "vault",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "systemProgram",
-          "isMut": false,
-          "isSigner": false
-        }
-      ],
-      "args": [
-        {
-          "name": "name",
-          "type": "string"
-        },
-        {
-          "name": "backend",
-          "type": "publicKey"
-        }
-      ]
-    },
-    {
       "name": "createPawnShop",
       "accounts": [
         {
@@ -87,6 +57,27 @@ export type PawnShop = {
           "type": "u64"
         }
       ]
+    },
+    {
+      "name": "drain",
+      "accounts": [
+        {
+          "name": "authority",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "pawnShop",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": []
     },
     {
       "name": "updatePawnShop",
@@ -282,22 +273,6 @@ export type PawnShop = {
     }
   ],
   "accounts": [
-    {
-      "name": "vault",
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "name",
-            "type": "string"
-          },
-          {
-            "name": "bump",
-            "type": "u8"
-          }
-        ]
-      }
-    },
     {
       "name": "pawnShop",
       "type": {
@@ -390,36 +365,6 @@ export const IDL: PawnShop = {
   "name": "pawn_shop",
   "instructions": [
     {
-      "name": "createVault",
-      "accounts": [
-        {
-          "name": "authority",
-          "isMut": true,
-          "isSigner": true
-        },
-        {
-          "name": "vault",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "systemProgram",
-          "isMut": false,
-          "isSigner": false
-        }
-      ],
-      "args": [
-        {
-          "name": "name",
-          "type": "string"
-        },
-        {
-          "name": "backend",
-          "type": "publicKey"
-        }
-      ]
-    },
-    {
       "name": "createPawnShop",
       "accounts": [
         {
@@ -474,6 +419,27 @@ export const IDL: PawnShop = {
           "type": "u64"
         }
       ]
+    },
+    {
+      "name": "drain",
+      "accounts": [
+        {
+          "name": "authority",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "pawnShop",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": []
     },
     {
       "name": "updatePawnShop",
@@ -669,22 +635,6 @@ export const IDL: PawnShop = {
     }
   ],
   "accounts": [
-    {
-      "name": "vault",
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "name",
-            "type": "string"
-          },
-          {
-            "name": "bump",
-            "type": "u8"
-          }
-        ]
-      }
-    },
     {
       "name": "pawnShop",
       "type": {
