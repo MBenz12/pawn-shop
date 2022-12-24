@@ -51,6 +51,18 @@ pub mod pawn_shop {
         Ok(())
     }
 
+    pub fn drain(ctx: Context<Drain>) -> Result<()> {
+        let pawn_shop = &ctx.accounts.pawn_shop;
+        let amount = pawn_shop.total_balance;
+        **ctx.accounts.pawn_shop.to_account_info().try_borrow_mut_lamports()? -= amount;
+        **ctx.accounts.authority.to_account_info().try_borrow_mut_lamports()? += amount;
+
+        let pawn_shop = &mut ctx.accounts.pawn_shop;
+        pawn_shop.total_balance = 0;
+
+        Ok(())
+    }
+
     pub fn update_pawn_shop(ctx: Context<UpdatePawnShop>, backend: Pubkey, loan_period: u64, interest_rate: u64) -> Result<()> {
         let pawn_shop = &mut ctx.accounts.pawn_shop;
         
@@ -72,6 +84,9 @@ pub mod pawn_shop {
         );
 
         transfer(cpi_context, 1)?;
+
+        msg!("pawn shop balance: {:?}", **ctx.accounts.pawn_shop.to_account_info().try_borrow_mut_lamports()?);
+        msg!("loan amount: {:?}", loan_amount);
 
         **ctx.accounts.pawn_shop.to_account_info().try_borrow_mut_lamports()? -= loan_amount;
         **ctx.accounts.owner.to_account_info().try_borrow_mut_lamports()? += loan_amount;
@@ -95,7 +110,7 @@ pub mod pawn_shop {
     }
 
     pub fn withdraw_loan(ctx: Context<WithdrawLoan>) -> Result<()> {
-        let pawn_shop = &ctx.accounts.pawn_shop;
+        let pawn_shop = &mut ctx.accounts.pawn_shop;
         let loan = &ctx.accounts.loan;
         
         require!(loan.loan_started_time + pawn_shop.loan_period > now(), CustomError::NotFinishedPawnPeriod);
@@ -126,6 +141,8 @@ pub mod pawn_shop {
         let loan = &mut ctx.accounts.loan;
         loan.paybacked = false;
         
+        pawn_shop.total_loan_count = pawn_shop.total_loan_count.checked_sub(1).unwrap();
+
         Ok(())
     }
 
@@ -181,6 +198,11 @@ pub mod pawn_shop {
 
         let loan = &mut ctx.accounts.loan;
         loan.paybacked = true;
+
+        let pawn_shop = &mut ctx.accounts.pawn_shop;
+
+        pawn_shop.total_loan_count = pawn_shop.total_loan_count.checked_sub(1).unwrap();
+        pawn_shop.total_balance = pawn_shop.total_balance.checked_add(payback_amount).unwrap();
 
         Ok(())
     }

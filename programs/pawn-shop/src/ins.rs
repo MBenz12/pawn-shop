@@ -47,6 +47,26 @@ pub struct Fund<'info>
 }
 
 #[derive(Accounts)]
+pub struct Drain<'info>
+{
+    #[account(mut, address = pawn_shop.authority)]
+    pub authority: Signer<'info>,
+
+    #[account(
+        mut,
+        seeds = [
+            PAWN_SHOP_SEED.as_bytes(),
+            pawn_shop.name.as_bytes(),
+        ],
+        bump = pawn_shop.bump,
+    )]
+    pub pawn_shop: Account<'info, PawnShop>,
+
+    pub system_program: Program<'info, System>,
+}
+
+
+#[derive(Accounts)]
 pub struct UpdatePawnShop<'info>
 {
     #[account(mut, address = pawn_shop.authority)]
@@ -83,7 +103,7 @@ pub struct CreateLoan<'info>
     pub pawn_shop: Account<'info, PawnShop>,
 
     #[account(
-        init,
+        init_if_needed,
         payer = owner,
         space = Loan::LEN + 8,
         seeds = [
