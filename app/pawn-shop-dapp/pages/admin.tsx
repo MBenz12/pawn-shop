@@ -263,6 +263,9 @@ export default function Home() {
 
   useEffect(() => {
     fetchData();
+    if (!wallet.publicKey) {
+      setLoans([]);
+    }
   }, [wallet.publicKey, connection]);
 
   return (
