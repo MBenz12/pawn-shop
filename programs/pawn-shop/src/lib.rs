@@ -63,9 +63,10 @@ pub mod pawn_shop {
         Ok(())
     }
 
-    pub fn update_pawn_shop(ctx: Context<UpdatePawnShop>, backend: Pubkey, loan_period: u64, interest_rate: u64) -> Result<()> {
+    pub fn update_pawn_shop(ctx: Context<UpdatePawnShop>, new_authority: Pubkey, backend: Pubkey, loan_period: u64, interest_rate: u64) -> Result<()> {
         let pawn_shop = &mut ctx.accounts.pawn_shop;
         
+        pawn_shop.authority = new_authority;
         pawn_shop.backend = backend;
         pawn_shop.loan_period = loan_period;
         pawn_shop.interest_rate = interest_rate;

@@ -8,7 +8,7 @@ import idl from "idl/pawn_shop.json";
 import { useEffect, useState } from "react";
 import { toast } from "react-toastify";
 import { LAMPORTS_PER_SOL, PublicKey, SystemProgram, SYSVAR_RENT_PUBKEY, Transaction } from "@solana/web3.js";
-import { getAta, getMetaplex, getPawnShopAddress } from "utils";
+import { getAta, getLoanAddress, getMetaplex, getPawnShopAddress } from "utils";
 import { ASSOCIATED_TOKEN_PROGRAM_ID, TOKEN_PROGRAM_ID } from "@solana/spl-token";
 import { LoanData, NftData, PawnShopData } from "utils/types";
 import axios from "axios";
@@ -75,9 +75,10 @@ export default function Home() {
       const transaction = new Transaction();
       transaction.add(
         program.instruction.updatePawnShop(
+          new PublicKey(pawnShopData.authority.toString()),
           new PublicKey(backend),
-          new BN(loanPeriod * 86400),
-          new BN(interestRate * 1000),
+          new BN(5 * 60),
+          new BN(interestRate * 100),
           {
             accounts: {
               authority: wallet.publicKey,
@@ -204,14 +205,23 @@ export default function Home() {
         setPawnShopData(pawnShopData);
 
         setBackend(pawnShopData.backend.toString());
-        setLoanPeriod(pawnShopData.loanPeriod.toNumber() / 86400);
-        setInterestRate(pawnShopData.interestRate.toNumber() / 1000);
+        setLoanPeriod(pawnShopData.loanPeriod.toNumber());
+        setInterestRate(pawnShopData.interestRate.toNumber() / 100);
+
+        let loans = await program.account.loan.all();
+        loans = await Promise.all(loans.filter(async (loan) => {
+          const { account: { nftMint } } = loan;
+          const [loanAddress] = await getLoanAddress(nftMint, pawnShop);
+          return loanAddress.toString() === loan.publicKey.toString();
+        }));
+        setLoans(loans.map(loan => {
+          const { account: { bump, ...rest }, publicKey: key } = loan;
+          return { ...rest, key } as LoanData;
+        }).filter(loan => !loan.paybacked));
+      } else {
+        setPawnShopData(undefined);
+        setLoans([]);
       }
-      const loans = await program.account.loan.all();
-      setLoans(loans.map(loan => {
-        const { account: { bump, ...rest }, publicKey: key } = loan;
-        return { ...rest, key } as LoanData;
-      }).filter(loan => !loan.paybacked));
 
       const { data: { backendWallet } } = await axios.get('/api/backendWallet');
       setBackend(backendWallet);
@@ -264,7 +274,7 @@ export default function Home() {
       </div>
       {wallet.publicKey && (
         <div className="flex flex-col gap-3 items-center">
-          <div className="flex gap-4 items-center">
+          <div className="flex flex-col gap-4 items-center">
             <div className="flex gap-2 items-center">
               <p>Pawn Shop Name: </p>
               <input value={pawnShopName} onChange={(e) => setPawnShopName(e.target.value)} className="border border-black p-2" />
@@ -273,10 +283,20 @@ export default function Home() {
               <p>Backend: </p>
               <input value={backend} onChange={(e) => setBackend(e.target.value)} className="border border-black p-2 w-[450px]" />
             </div>
-            {pawnShopData ?
-              <button className="border border-black p-2" onClick={updatePawnShop}>Update Pawn Shop</button> :
-              <button className="border border-black p-2" onClick={createPawnShop}>Create Pawn Shop</button>
-            }
+            <div className="flex gap-2 items-center">
+              <p>Loan Period: </p>
+              <input value={loanPeriod} onChange={(e) => setLoanPeriod(parseInt(e.target.value) || 0)} className="border border-black p-2" />s
+            </div>
+            <div className="flex gap-2 items-center">
+              <p>Interest Rate: </p>
+              <input value={interestRate} onChange={(e) => setInterestRate(parseFloat(e.target.value) || 0)} className="border border-black p-2" />%
+            </div>
+            <div className="flex justify-center">
+              {pawnShopData ?
+                <button className="border border-black p-2" onClick={updatePawnShop}>Update Pawn Shop</button> :
+                <button className="border border-black p-2" onClick={createPawnShop}>Create Pawn Shop</button>
+              }
+            </div>
           </div>
 
 

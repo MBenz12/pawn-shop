@@ -95,6 +95,10 @@ export type PawnShop = {
       ],
       "args": [
         {
+          "name": "newAuthority",
+          "type": "publicKey"
+        },
+        {
           "name": "backend",
           "type": "publicKey"
         },
@@ -456,6 +460,10 @@ export const IDL: PawnShop = {
         }
       ],
       "args": [
+        {
+          "name": "newAuthority",
+          "type": "publicKey"
+        },
         {
           "name": "backend",
           "type": "publicKey"

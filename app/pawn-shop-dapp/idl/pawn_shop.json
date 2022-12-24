@@ -95,6 +95,10 @@
       ],
       "args": [
         {
+          "name": "newAuthority",
+          "type": "publicKey"
+        },
+        {
           "name": "backend",
           "type": "publicKey"
         },
