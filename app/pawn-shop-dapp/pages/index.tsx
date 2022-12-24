@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/exhaustive-deps */
 /* eslint-disable @next/next/no-img-element */
 import { AnchorProvider, Program, Wallet } from "@project-serum/anchor";
 import { useAnchorWallet, useConnection, useWallet } from "@solana/wallet-adapter-react";
@@ -170,6 +171,10 @@ export default function Home() {
   useEffect(() => {
     fetchWalletNfts();
     fetchLoans();
+    if (!wallet.publicKey) {
+      setLoans([]);
+      setNfts([]);
+    }
   }, [wallet.publicKey, connection]);
 
   return (
@@ -187,7 +192,7 @@ export default function Home() {
               <div className="flex flex-col gap-2 p-1 rounded-md border border-black" key={"nft" + index}>
                 <div className="flex justify-center items-center text-center text-[20px] font-semibold h-[24px]">{nft.name}</div>
                 <div className="flex items-center h-[300px]">
-                  <img src={nft.image} />
+                  <img src={nft.image} alt="" />
                 </div>
                 <div className="flex items-center justify-center text-center text-[20px] font-semibold">{nft.loanAmount} SOL</div>
                 <button className="p-2 border border-black rounded-md text-[16px]" onClick={() => pawn(nft)}>Pawn</button>
