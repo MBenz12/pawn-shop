@@ -103,7 +103,7 @@ pub struct CreateLoan<'info>
     pub pawn_shop: Account<'info, PawnShop>,
 
     #[account(
-        init,
+        init_if_needed,
         payer = owner,
         space = Loan::LEN + 8,
         seeds = [
