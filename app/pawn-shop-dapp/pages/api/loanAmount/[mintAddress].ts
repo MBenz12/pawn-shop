@@ -36,5 +36,5 @@ export async function getLoanAmount(mintAddress: string) {
   } catch (error) {
     // console.log(error);
   }
-  return 0.1;
+  return 0;
 }

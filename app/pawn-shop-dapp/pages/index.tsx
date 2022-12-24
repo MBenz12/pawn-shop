@@ -1,3 +1,4 @@
+/* eslint-disable @next/next/no-img-element */
 import { AnchorProvider, Program, Wallet } from "@project-serum/anchor";
 import { useAnchorWallet, useConnection, useWallet } from "@solana/wallet-adapter-react";
 import { WalletModalButton, WalletMultiButton } from "@solana/wallet-adapter-react-ui";
@@ -40,12 +41,12 @@ export default function Home() {
       const recoveredTx = Transaction.from(Buffer.from(serializedBuffer, "base64"));
       const signedTx = await wallet.signTransaction(recoveredTx);
       console.log(signedTx);
-      const txSignature = await connection.sendRawTransaction(signedTx.serialize(), { skipPreflight: false });
+      const txSignature = await connection.sendRawTransaction(signedTx.serialize(), { skipPreflight: true });
       await connection.confirmTransaction(txSignature, "confirmed");
       console.log(txSignature);
       toast.success("Pawned Successfully");
       fetchWalletNfts();
-      fetchPawnedNfts();
+      fetchLoans();
     } catch (error) {
       console.log(error);
       toast.error("Failed");
@@ -134,7 +135,7 @@ export default function Home() {
       setLoans(loans.map(loan => {
         const { account: { bump, ...rest }, publicKey: key } = loan;
         return { ...rest, key } as LoanData;
-      }).filter(loanData => !loanData.paybacked));
+      }).filter(loanData => !loanData.paybacked && loanData.owner.toString() === wallet.publicKey?.toString()));
     } catch (error) {
       console.log(error);
       toast.error("Failed");
@@ -202,13 +203,13 @@ export default function Home() {
                   <div key={loan.key.toString()} className="flex flex-col gap-2 p-1 rounded-md border border-black">
                     <div className="flex justify-center items-center text-center text-[20px] font-semibold h-[24px]">{pawnedNfts[index] && pawnedNfts[index].name}</div>
                     <div className="flex items-center h-[300px]">
-                      <img src={pawnedNfts[index] && pawnedNfts[index].image} />
+                      <img src={pawnedNfts[index] && pawnedNfts[index].image} alt="" />
                     </div>
-                    <div className="flex items-center justify-center text-center text-[20px] font-semibold">Loan Amount: {loan.loanAmount.toNumber() / LAMPORTS_PER_SOL} SOL</div>
-                    <div className="flex items-center justify-center text-center text-[20px] font-semibold">
+                    <div className="flex items-center justify-center text-center text-[16px] font-semibold">Loan Amount: {loan.loanAmount.toNumber() / LAMPORTS_PER_SOL} SOL</div>
+                    <div className="flex items-center justify-center text-center text-[16px] font-semibold">
                       Interest Amount: {(loan.loanAmount.toNumber() * pawnShopData.interestRate.toNumber() * Math.ceil((new Date().getTime() - loan.loanStartedTime.toNumber() * 1000) / 86400 / 1000) / (100 * 100)) / LAMPORTS_PER_SOL} SOL
                     </div>
-                    <div className="flex items-center justify-center text-center text-[20px] font-semibold">
+                    <div className="flex items-center justify-center text-center text-[16px] font-semibold">
                       Payback Amount: {(loan.loanAmount.toNumber() * (pawnShopData.interestRate.toNumber() * Math.ceil((new Date().getTime() - loan.loanStartedTime.toNumber() * 1000) / 86400 / 1000) + 100 * 100) / (100 * 100)) / LAMPORTS_PER_SOL} SOL
                     </div>
                     <div className="flex justify-center">

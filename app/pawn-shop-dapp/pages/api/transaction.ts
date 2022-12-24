@@ -35,7 +35,7 @@ export default async function handler(
   if (!mintAddress) loanAmount = 0;
   else loanAmount = await getLoanAmount(mintAddress);
   console.log(mintAddress, loanAmount);
-  loanAmount = 1;
+  
   const backend = wallet.publicKey;
   const nftMint = new PublicKey(mintAddress);
   const owner = new PublicKey(ownerAddress);

@@ -1,3 +1,5 @@
+/* eslint-disable react-hooks/exhaustive-deps */
+/* eslint-disable @next/next/no-img-element */
 import { AnchorProvider, BN, Program, Wallet } from "@project-serum/anchor";
 import { useAnchorWallet, useConnection, useWallet } from "@solana/wallet-adapter-react";
 import { WalletModalButton, WalletMultiButton } from "@solana/wallet-adapter-react-ui";
@@ -57,7 +59,7 @@ export default function Home() {
       const txSignature = await wallet.sendTransaction(transaction, connection, { skipPreflight: true });
       await connection.confirmTransaction(txSignature, "confirmed");
       console.log(txSignature);
-      toast.success("Pawned Successfully");
+      toast.success("PawnShop Created Successfully");
       fetchData();
     } catch (error) {
       console.log(error);
@@ -86,7 +88,7 @@ export default function Home() {
       );
       const txSignature = await wallet.sendTransaction(transaction, connection, { skipPreflight: true });
       console.log(txSignature);
-      toast.success("Pawned Successfully");
+      toast.success("PawnShop Updated Successfully");
       fetchData();
     } catch (error) {
       console.log(error);
@@ -115,7 +117,35 @@ export default function Home() {
       const txSignature = await wallet.sendTransaction(transaction, connection, { skipPreflight: true });
       await connection.confirmTransaction(txSignature, "confirmed");
       console.log(txSignature);
-      toast.success("Pawned Successfully");
+      toast.success("Funded Successfully");
+      fetchData();
+    } catch (error) {
+      console.log(error);
+      toast.error("Failed");
+    }
+  }
+
+  const drain = async () => {
+    if (!wallet.publicKey || !pawnShopData) return;
+    try {
+      const { program } = getProgramAndProvider();
+      const [pawnShop] = await getPawnShopAddress(pawnShopData.name);
+      const transaction = new Transaction();
+      transaction.add(
+        program.instruction.drain(
+          {
+            accounts: {
+              authority: wallet.publicKey,
+              pawnShop,
+              systemProgram: SystemProgram.programId
+            }
+          }
+        )
+      );
+      const txSignature = await wallet.sendTransaction(transaction, connection, { skipPreflight: true });
+      await connection.confirmTransaction(txSignature, "confirmed");
+      console.log(txSignature);
+      toast.success("Drained Successfully");
       fetchData();
     } catch (error) {
       console.log(error);
@@ -155,7 +185,7 @@ export default function Home() {
       const txSignature = await wallet.sendTransaction(transaction, connection, { skipPreflight: true });
       await connection.confirmTransaction(txSignature, "confirmed");
       console.log(txSignature);
-      toast.success("Pawned Successfully");
+      toast.success("Loan Withdrawed Successfully");
       fetchData();
     } catch (error) {
       console.log(error);
@@ -181,7 +211,7 @@ export default function Home() {
       setLoans(loans.map(loan => {
         const { account: { bump, ...rest }, publicKey: key } = loan;
         return { ...rest, key } as LoanData;
-      }));
+      }).filter(loan => !loan.paybacked));
 
       const { data: { backendWallet } } = await axios.get('/api/backendWallet');
       setBackend(backendWallet);
@@ -232,7 +262,7 @@ export default function Home() {
           !wallet.publicKey ? <WalletModalButton /> : <WalletMultiButton />
         }
       </div>
-      {wallet.connected && (
+      {wallet.publicKey && (
         <div className="flex flex-col gap-3 items-center">
           <div className="flex gap-4 items-center">
             <div className="flex gap-2 items-center">
@@ -250,9 +280,12 @@ export default function Home() {
           </div>
 
 
-          {pawnShopData &&
+          {pawnShopData && pawnShopData.authority.toString() === wallet.publicKey.toString() &&
             <>
-              <p>Total Balance: {pawnShopData.totalBalance.toString()}</p>
+              <div className="flex gap-2 items-center">
+                <p>Total Balance: {pawnShopData.totalBalance.toNumber() / LAMPORTS_PER_SOL}</p>
+                <button className="border border-black p-2" onClick={drain}>Drain</button>
+              </div>
               <div className="flex gap-2 items-center">
                 <p>Fund Amount: </p>
                 <input type="number" value={fundAmount} onChange={(e) => setFundAmount(parseFloat(e.target.value) || 0)} className="border border-black p-2" /> SOL
@@ -263,10 +296,11 @@ export default function Home() {
                 <div className="w-full grid xl:grid-cols-6 md:grid-cols-4 sm:grid-cols-2 grid-cols-1 gap-4">
                   {loans.map((loan, index) => (
                     <div key={loan.key.toString()} className="flex flex-col gap-2 p-1 rounded-md border border-black">
-                      <div className="flex justify-center items-center text-center text-[20px] font-semibold h-[24px]">{nfts[index].name}</div>
+                      <div className="flex justify-center items-center text-center text-[20px] font-semibold h-[24px]">{nfts[index] && nfts[index].name}</div>
                       <div className="flex items-center h-[300px]">
-                        <img src={nfts[index].image} />
+                        <img src={nfts[index] && nfts[index].image} alt="" />
                       </div>
+                      <div className="flex items-center justify-center text-center text-[18px]">Owner: {loan.owner.toString().slice(0, 4) + "..." + loan.owner.toString().slice(-4)}</div>
                       <div className="flex items-center justify-center text-center text-[20px] font-semibold">{loan.loanAmount.toNumber() / LAMPORTS_PER_SOL} SOL</div>
                       <div className="flex justify-center">
                         <Timer finishTime={(loan.loanStartedTime.toNumber() + pawnShopData.loanPeriod.toNumber()) * 1000} />
