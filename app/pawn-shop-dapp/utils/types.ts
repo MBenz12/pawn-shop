@@ -28,3 +28,8 @@ export type PawnShopData = {
     loanPeriod: BN;
     interestRate: BN;
 }
+
+export type Collection = {
+    address: string;
+    percent: number;
+}

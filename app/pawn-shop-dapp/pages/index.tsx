@@ -10,7 +10,7 @@ import { useEffect, useMemo, useState } from "react";
 import { toast } from "react-toastify";
 import { LAMPORTS_PER_SOL, SystemProgram, Transaction } from "@solana/web3.js";
 import axios from "axios";
-import { LoanData, NftData, PawnShopData } from "utils/types";
+import { Collection, LoanData, NftData, PawnShopData } from "utils/types";
 import { getAta, getPawnShopAddress } from "utils";
 import { Timer } from "components/Timer";
 import { TOKEN_PROGRAM_ID } from "@solana/spl-token";
@@ -24,6 +24,7 @@ export default function Home() {
   const [pawnShopData, setPawnShopData] = useState<PawnShopData | undefined>();
   const [loans, setLoans] = useState<LoanData[]>([]);
   const [pawnedNfts, setPawnedNfts] = useState<NftData[]>([]);
+  const [collections, setCollections] = useState<string[]>([]);
 
 
   const getProgramAndProvider = () => {
@@ -98,7 +99,11 @@ export default function Home() {
       const nfts = await metaplex.nfts().findAllByOwner({ owner: wallet.publicKey });
       setNfts(
         await Promise.all(
-          nfts.map(async (nft) => {
+          nfts.filter((nft) => {
+            const { creators } = nft;
+            const creator = creators[0].address.toString();
+            return collections.includes(creator);
+          }).map(async (nft) => {
             // @ts-ignore
             const { mintAddress, name, symbol, uri } = nft;
             const nftData: NftData = { address: mintAddress, name, symbol, image: '', loanAmount: 0 };
@@ -175,7 +180,19 @@ export default function Home() {
       setLoans([]);
       setNfts([]);
     }
+    getCollections();
   }, [wallet.publicKey, connection]);
+
+  const getCollections = async () => {
+    try {
+      const { data } = await axios.get('/api/collection/all');
+      const collections = (data as Collection[]).map(collection => collection.address);
+      setCollections(collections);
+    } catch (error) {
+      console.log(error);
+      toast.error("Failed");
+    }
+  }
 
   return (
     <div className="flex flex-col mx-5 gap-10">
