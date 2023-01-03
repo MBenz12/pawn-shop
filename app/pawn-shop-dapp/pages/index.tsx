@@ -101,6 +101,7 @@ export default function Home() {
         await Promise.all(
           nfts.filter((nft) => {
             const { creators } = nft;
+            if (!creators.length) return false;
             const creator = creators[0].address.toString();
             return collections.includes(creator);
           }).map(async (nft) => {
