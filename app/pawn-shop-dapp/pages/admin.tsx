@@ -269,7 +269,7 @@ export default function Home() {
   }, [wallet.publicKey, connection]);
 
   return (
-    <div className="flex flex-col mx-5">
+    <div className="flex flex-col mx-5 text-black">
       <div className="flex justify-center my-5">
         {
           !wallet.publicKey ? <WalletModalButton /> : <WalletMultiButton />

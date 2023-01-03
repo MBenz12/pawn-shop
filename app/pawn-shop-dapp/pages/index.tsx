@@ -179,9 +179,9 @@ export default function Home() {
 
   return (
     <div className="flex flex-col mx-5 gap-10">
-      <div className="flex justify-center my-5">
+      <div className="flex justify-end py-2 border-b border-white/[0.07]">
         {
-          !wallet.publicKey ? <WalletModalButton /> : <WalletMultiButton />
+          !wallet.publicKey ? <WalletModalButton className="custom-connect-style" /> : <WalletMultiButton className="custom-connect-style" />
         }
       </div>
       {wallet.connected && (
@@ -189,23 +189,23 @@ export default function Home() {
           <div className="text-center text-[20px] font-bold">Your Wallet</div>
           <div className="w-full grid xl:grid-cols-6 md:grid-cols-4 sm:grid-cols-2 grid-cols-1 gap-4">
             {nfts.map((nft, index) => (
-              <div className="flex flex-col gap-2 p-1 rounded-md border border-black" key={"nft" + index}>
+              <div className="flex flex-col gap-2 p-1 rounded-md border border-white" key={"nft" + index}>
                 <div className="flex justify-center items-center text-center text-[20px] font-semibold h-[24px]">{nft.name}</div>
                 <div className="flex items-center h-[300px]">
                   <img src={nft.image} alt="" />
                 </div>
                 <div className="flex items-center justify-center text-center text-[20px] font-semibold">{nft.loanAmount} SOL</div>
-                <button className="p-2 border border-black rounded-md text-[16px]" onClick={() => pawn(nft)}>Pawn</button>
+                <button className="p-2 border border-white rounded-md text-[16px]" onClick={() => pawn(nft)}>Pawn</button>
               </div>
             ))}
           </div>
 
           {pawnShopData &&
-            <div className="flex flex-col gap-5">
+            <div className="flex flex-col gap-5 mb-5">
               <div className="text-center text-[20px] font-bold">Pawned NFTs</div>
               <div className="w-full grid xl:grid-cols-6 md:grid-cols-4 sm:grid-cols-2 grid-cols-1 gap-4">
                 {loans.map((loan, index) => (
-                  <div key={loan.key.toString()} className="flex flex-col gap-2 p-1 rounded-md border border-black">
+                  <div key={loan.key.toString()} className="flex flex-col gap-2 p-1 rounded-md border border-white">
                     <div className="flex justify-center items-center text-center text-[20px] font-semibold h-[24px]">{pawnedNfts[index] && pawnedNfts[index].name}</div>
                     <div className="flex items-center h-[300px]">
                       <img src={pawnedNfts[index] && pawnedNfts[index].image} alt="" />
@@ -222,7 +222,7 @@ export default function Home() {
                     </div>
                     <button
                       disabled={(new Date().getTime() > (loan.loanStartedTime.toNumber() + pawnShopData.loanPeriod.toNumber()) * 1000 && !loan.paybacked)}
-                      className="p-2 border border-black rounded-md text-[16px]"
+                      className="p-2 border border-white rounded-md text-[16px]"
                       onClick={() => payback(loan)}
                     >
                       Payback
