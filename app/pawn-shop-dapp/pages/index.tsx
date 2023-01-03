@@ -224,8 +224,8 @@ export default function Home() {
                 {loans.map((loan, index) => (
                   <div key={loan.key.toString()} className="flex flex-col gap-2 p-1 rounded-md border border-white">
                     <div className="flex justify-center items-center text-center text-[20px] font-semibold h-[24px]">{pawnedNfts[index] && pawnedNfts[index].name}</div>
-                    <div className="flex items-center h-[300px]">
-                      <img src={pawnedNfts[index] && pawnedNfts[index].image} alt="" />
+                    <div className="flex items-center h-[300px] justify-center">
+                      <img src={pawnedNfts[index] && pawnedNfts[index].image} alt="" className="h-full w-full" />
                     </div>
                     <div className="flex items-center justify-center text-center text-[16px] font-semibold">Loan Amount: {loan.loanAmount.toNumber() / LAMPORTS_PER_SOL} SOL</div>
                     <div className="flex items-center justify-center text-center text-[16px] font-semibold">
@@ -242,7 +242,7 @@ export default function Home() {
                       className="p-2 border border-white rounded-md text-[16px]"
                       onClick={() => payback(loan)}
                     >
-                      Payback
+                      {(new Date().getTime() > (loan.loanStartedTime.toNumber() + pawnShopData.loanPeriod.toNumber()) * 1000 && !loan.paybacked) ? 'Defaulted' : 'Payback'}
                     </button>
                   </div>
                 ))}
