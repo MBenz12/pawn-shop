@@ -10,10 +10,11 @@ import { toast } from "react-toastify";
 import { LAMPORTS_PER_SOL, PublicKey, SystemProgram, SYSVAR_RENT_PUBKEY, Transaction } from "@solana/web3.js";
 import { getAta, getLoanAddress, getMetaplex, getPawnShopAddress } from "utils";
 import { ASSOCIATED_TOKEN_PROGRAM_ID, TOKEN_PROGRAM_ID } from "@solana/spl-token";
-import { LoanData, NftData, PawnShopData } from "utils/types";
+import { Collection, LoanData, NftData, PawnShopData } from "utils/types";
 import axios from "axios";
 import { Timer } from "components/Timer";
-import { PAWNSHOP_NAME } from "config";
+import { JWT_TOKEN, PAWNSHOP_NAME } from "config";
+import jwt from "jsonwebtoken";
 
 const metaplex = getMetaplex();
 
@@ -29,6 +30,9 @@ export default function Home() {
   const [fundAmount, setFundAmount] = useState(0);
   const [loans, setLoans] = useState<LoanData[]>([]);
   const [nfts, setNfts] = useState<NftData[]>([]);
+  const [collections, setCollections] = useState<Collection[]>([]);
+  const [collectionAddress, setCollectionAddress] = useState('');
+  const [percent, setPercent] = useState(0);
 
   const getProgramAndProvider = () => {
     const provider = new AnchorProvider(connection, anchorWallet as Wallet, AnchorProvider.defaultOptions());
@@ -231,10 +235,102 @@ export default function Home() {
     }
   }
 
+  function updateAccessToken(token: string) {
+    if (token) {
+      localStorage.setItem("accessToken", token);
+      axios.defaults.headers.common.Authorization = `Bearer ${token}`;
+    } else {
+      localStorage.removeItem('accessToken');
+      delete axios.defaults.headers.common.Authorization;
+    }
+  }
+
+  async function getSignedMessage() {
+    if (wallet.signMessage && wallet.publicKey) {
+      const message = "I am an authorized admin wallet.";
+      const signature = await wallet.signMessage(new Uint8Array(Buffer.from(message)));
+
+      return { message, signature, wallet: wallet.publicKey.toString() };
+    }
+  }
+  // console.log(jwt.sign("hello", "key", { expiresIn: 3600 }));
+
+  async function getCollections() {
+    if (!wallet.signMessage || !wallet.publicKey) return;
+
+    try {
+      let token = localStorage.getItem('accessToken');
+      console.log(token);
+      if (!token) {
+        const payload = await getSignedMessage();
+        console.log(payload);
+        if (payload) {
+          updateAccessToken(jwt.sign(payload, JWT_TOKEN, { expiresIn: 3600 }));
+        }
+      } else {
+        try {
+          const { payload } = jwt.verify(token, JWT_TOKEN, { complete: true });
+          // @ts-ignore
+          if (!payload || payload && payload.wallet !== wallet.publicKey.toString()) {
+            throw "Token invalid or unahtorized wallet";
+          }
+          updateAccessToken(token);
+        } catch (error) {
+          const newPayload = await getSignedMessage();
+          if (newPayload) {
+            updateAccessToken(jwt.sign(newPayload, JWT_TOKEN, { expiresIn: 3600 }));
+          }
+        }
+      }
+
+      const { data } = await axios.get(`/api/collection/all`);
+      if (data) {
+        setCollections(data as Collection[]);
+      }
+    } catch (error) {
+      console.log(error);
+      toast.error('Unauthorized Wallet');
+    }
+  }
+
+  const addCollection = async () => {
+    try {
+      let token = localStorage.getItem('accessToken');
+      if (token) {
+        updateAccessToken(token);
+        await axios.post(`/api/collection`, { collection: collectionAddress, loanPercent: percent });
+      }
+      const newCollections = collections.map(collection => ({ ...collection }));
+      newCollections.push({ address: collectionAddress, percent });
+      setCollections(newCollections);
+      toast.success('Success');
+    } catch (error) {
+      console.log(error);
+      toast.error('Failed');
+    }
+  }
+
+  const updateCollection = async (collection: Collection, del: boolean = false) => {
+    try {
+      let token = localStorage.getItem('accessToken');
+      if (token) {
+        updateAccessToken(token);
+        await axios.post(`/api/collection`, { collection: collection.address, loanPercent: del ? 0 : collection.percent });
+      }
+      if (del) {
+        const newCollections = collections.map(collection => ({ ...collection })).filter(col => col.address !== collection.address);
+        setCollections(newCollections);
+      }
+      toast.success('Success');
+    } catch (error) {
+      console.log(error);
+      toast.error('Failed');
+    }
+  }
+
   useEffect(() => {
     fetchData();
   }, [pawnShopName]);
-
 
   const fetchNfts = async () => {
     const nfts = await Promise.all(
@@ -266,6 +362,7 @@ export default function Home() {
     if (!wallet.publicKey) {
       setLoans([]);
     }
+    getCollections();
   }, [wallet.publicKey, connection]);
 
   return (
@@ -302,6 +399,26 @@ export default function Home() {
             </div>
           </div>
 
+          <div className="flex flex-col gap-2">
+            <div className="flex gap-2 items-center">
+              <p>Collection: </p>
+              <input value={collectionAddress} onChange={(e) => setCollectionAddress(e.target.value)} className="border border-black p-2 w-[450px]" />
+              <input value={percent} onChange={(e) => setPercent(parseFloat(e.target.value) || 0)} type="number" min={0} step={0.1} className="border border-black p-2 w-[60px]" />%
+              <button className="border border-black p-2" onClick={addCollection}>Add</button>
+            </div>
+            {collections.map((collection, index) => (
+              <div className="flex gap-2 items-center" key={collection.address}>
+                <p>Collection: {collection.address}</p>
+                <input value={collection.percent} onChange={(e) => {
+                  const newCollections = collections.map(collection => ({ ...collection }));
+                  newCollections[index].percent = parseFloat(e.target.value) || 0;
+                  setCollections(newCollections);
+                }} type="number" min={0} step={0.1} className="border border-black p-2 w-[60px]" />%
+                <button className="border border-black p-2" onClick={() => updateCollection(collection)}>Update</button>
+                <button className="border border-black p-2" onClick={() => updateCollection(collection, true)}>Delete</button>
+              </div>
+            ))}
+          </div>
 
           {pawnShopData && pawnShopData.authority.toString() === wallet.publicKey.toString() &&
             <>
