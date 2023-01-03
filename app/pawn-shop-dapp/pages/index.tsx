@@ -205,12 +205,12 @@ export default function Home() {
       {wallet.connected && (
         <div className="flex flex-col gap-5">
           <div className="text-center text-[20px] font-bold">Your Wallet</div>
-          <div className="w-full grid xl:grid-cols-6 md:grid-cols-4 sm:grid-cols-2 grid-cols-1 gap-4">
+          <div className="grid xl:grid-cols-5 md:grid-cols-3 sm:grid-cols-2 grid-cols-1 gap-4">
             {nfts.map((nft, index) => (
-              <div className="flex flex-col gap-2 p-1 rounded-md border border-white" key={"nft" + index}>
+              <div className="flex flex-col gap-2 p-1 h-fit rounded-md border border-white" key={"nft" + index}>
                 <div className="flex justify-center items-center text-center text-[20px] font-semibold h-[24px]">{nft.name}</div>
                 <div className="flex items-center justify-center">
-                  <img src={nft.image} alt="" className="h-full w-full" />
+                  <img src={nft.image} alt="" className="w-full object-contain" />
                 </div>
                 <div className="flex items-center justify-center text-center text-[20px] font-semibold">{nft.loanAmount.toLocaleString('en-us', { maximumFractionDigits: 3 })} SOL</div>
                 <button className="p-2 border border-white rounded-md text-[16px]" onClick={() => pawn(nft)}>Pawn</button>
@@ -221,12 +221,12 @@ export default function Home() {
           {pawnShopData &&
             <div className="flex flex-col gap-5 mb-5">
               <div className="text-center text-[20px] font-bold">Pawned NFTs</div>
-              <div className="w-full grid xl:grid-cols-6 md:grid-cols-4 sm:grid-cols-2 grid-cols-1 gap-4">
+              <div className="w-full grid xl:grid-cols-5 md:grid-cols-3 sm:grid-cols-2 grid-cols-1 gap-4">
                 {loans.map((loan, index) => (
                   <div key={loan.key.toString()} className="flex flex-col gap-2 p-1 rounded-md border border-white">
                     <div className="flex justify-center items-center text-center text-[20px] font-semibold h-[24px]">{pawnedNfts[index] && pawnedNfts[index].name}</div>
                     <div className="flex items-center justify-center">
-                      <img src={pawnedNfts[index] && pawnedNfts[index].image} alt="" className="h-full w-full" />
+                      <img src={pawnedNfts[index] && pawnedNfts[index].image} alt="" className="w-full object-contain" />
                     </div>
                     <div className="flex items-center justify-center text-center text-[14px] font-semibold">Loan Amount: {(loan.loanAmount.toNumber() / LAMPORTS_PER_SOL).toLocaleString('en-us', { maximumFractionDigits: 3 })} SOL</div>
                     <div className="flex items-center justify-center text-center text-[14px] font-semibold">

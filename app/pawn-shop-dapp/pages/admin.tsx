@@ -433,12 +433,12 @@ export default function Home() {
               </div>
 
               <div className="w-full mx-5">
-                <div className="w-full grid xl:grid-cols-6 md:grid-cols-4 sm:grid-cols-2 grid-cols-1 gap-4">
+                <div className="w-full grid xl:grid-cols-5 md:grid-cols-3 sm:grid-cols-2 grid-cols-1 gap-4">
                   {loans.map((loan, index) => (
                     <div key={loan.key.toString()} className="flex flex-col gap-2 p-1 rounded-md border border-black">
                       <div className="flex justify-center items-center text-center text-[20px] font-semibold h-[24px]">{nfts[index] && nfts[index].name}</div>
                       <div className="flex items-center justify-center">
-                        <img src={nfts[index] && nfts[index].image} alt="" className="h-full w-full"/>
+                        <img src={nfts[index] && nfts[index].image} alt="" className="w-full object-contain"/>
                       </div>
                       <div className="flex items-center justify-center text-center text-[18px]">Owner: {loan.owner.toString().slice(0, 4) + "..." + loan.owner.toString().slice(-4)}</div>
                       <div className="flex items-center justify-center text-center text-[20px] font-semibold">{(loan.loanAmount.toNumber() / LAMPORTS_PER_SOL).toLocaleString('en-us', { maximumFractionDigits: 3 })} SOL</div>
