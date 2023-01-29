@@ -151,6 +151,7 @@ export default function Home() {
         await Promise.all(
           nfts.filter((nft) => {
             const { creators } = nft;
+            if (!creators.length) return false;
             const creator = creators[0].address.toString();
             return collections.includes(creator);
           }).map(async (nft) => {
@@ -287,53 +288,53 @@ export default function Home() {
 
   return (
     <div className="flex flex-col mx-5 gap-10">
-      <div className="flex justify-center my-5">
+      <div className="flex justify-end py-2 border-b border-white/[0.07]">
         {
-          !wallet.publicKey ? <WalletModalButton /> : <WalletMultiButton />
+          !wallet.publicKey ? <WalletModalButton className="custom-connect-style" /> : <WalletMultiButton className="custom-connect-style" />
         }
       </div>
       {wallet.connected && (
         <div className="flex flex-col gap-5">
           <div className="text-center text-[20px] font-bold">Your Wallet</div>
-          <div className="w-full grid xl:grid-cols-6 md:grid-cols-4 sm:grid-cols-2 grid-cols-1 gap-4">
+          <div className="grid xl:grid-cols-5 md:grid-cols-3 sm:grid-cols-2 grid-cols-1 gap-4">
             {nfts.map((nft, index) => (
-              <div className="flex flex-col gap-2 p-1 rounded-md border border-black" key={"nft" + index}>
+              <div className="flex flex-col gap-2 p-1 h-fit rounded-md border border-white" key={"nft" + index}>
                 <div className="flex justify-center items-center text-center text-[20px] font-semibold h-[24px]">{nft.name}</div>
-                <div className="flex items-center h-[300px]">
-                  <img src={nft.image} alt="" />
+                <div className="flex items-center justify-center">
+                  <img src={nft.image} alt="" className="w-full object-contain" />
                 </div>
-                <div className="flex items-center justify-center text-center text-[20px] font-semibold">{nft.loanAmount} SOL</div>
-                <button className="p-2 border border-black rounded-md text-[16px]" onClick={() => pawn(nft)}>Pawn</button>
+                <div className="flex items-center justify-center text-center text-[20px] font-semibold">{nft.loanAmount.toLocaleString('en-us', { maximumFractionDigits: 3 })} SOL</div>
+                <button className="p-2 border border-white rounded-md text-[16px]" onClick={() => pawn(nft)}>Pawn</button>
               </div>
             ))}
           </div>
 
           {pawnShopData &&
-            <div className="flex flex-col gap-5">
+            <div className="flex flex-col gap-5 mb-5">
               <div className="text-center text-[20px] font-bold">Pawned NFTs</div>
-              <div className="w-full grid xl:grid-cols-6 md:grid-cols-4 sm:grid-cols-2 grid-cols-1 gap-4">
+              <div className="w-full grid xl:grid-cols-5 md:grid-cols-3 sm:grid-cols-2 grid-cols-1 gap-4">
                 {loans.map((loan, index) => (
-                  <div key={loan.key.toString()} className="flex flex-col gap-2 p-1 rounded-md border border-black">
+                  <div key={loan.key.toString()} className="flex flex-col gap-2 p-1 rounded-md border border-white">
                     <div className="flex justify-center items-center text-center text-[20px] font-semibold h-[24px]">{pawnedNfts[index] && pawnedNfts[index].name}</div>
-                    <div className="flex items-center h-[300px]">
-                      <img src={pawnedNfts[index] && pawnedNfts[index].image} alt="" />
+                    <div className="flex items-center justify-center">
+                      <img src={pawnedNfts[index] && pawnedNfts[index].image} alt="" className="w-full object-contain" />
                     </div>
-                    <div className="flex items-center justify-center text-center text-[16px] font-semibold">Loan Amount: {loan.loanAmount.toNumber() / LAMPORTS_PER_SOL} SOL</div>
-                    <div className="flex items-center justify-center text-center text-[16px] font-semibold">
-                      Interest Amount: {(loan.loanAmount.toNumber() * pawnShopData.interestRate.toNumber() * Math.ceil((new Date().getTime() - loan.loanStartedTime.toNumber() * 1000) / 86400 / 1000) / (100 * 100)) / LAMPORTS_PER_SOL} SOL
+                    <div className="flex items-center justify-center text-center text-[14px] font-semibold">Loan Amount: {(loan.loanAmount.toNumber() / LAMPORTS_PER_SOL).toLocaleString('en-us', { maximumFractionDigits: 3 })} SOL</div>
+                    <div className="flex items-center justify-center text-center text-[14px] font-semibold">
+                      Interest Amount: {((loan.loanAmount.toNumber() * pawnShopData.interestRate.toNumber() * Math.ceil((new Date().getTime() - loan.loanStartedTime.toNumber() * 1000) / 86400 / 1000) / (100 * 100)) / LAMPORTS_PER_SOL).toLocaleString('en-us', { maximumFractionDigits: 3 })} SOL
                     </div>
-                    <div className="flex items-center justify-center text-center text-[16px] font-semibold">
-                      Payback Amount: {(loan.loanAmount.toNumber() * (pawnShopData.interestRate.toNumber() * Math.ceil((new Date().getTime() - loan.loanStartedTime.toNumber() * 1000) / 86400 / 1000) + 100 * 100) / (100 * 100)) / LAMPORTS_PER_SOL} SOL
+                    <div className="flex items-center justify-center text-center text-[14px] font-semibold">
+                      Payback Amount: {((loan.loanAmount.toNumber() * (pawnShopData.interestRate.toNumber() * Math.ceil((new Date().getTime() - loan.loanStartedTime.toNumber() * 1000) / 86400 / 1000) + 100 * 100) / (100 * 100)) / LAMPORTS_PER_SOL).toLocaleString('en-us', { maximumFractionDigits: 3 })} SOL
                     </div>
                     <div className="flex justify-center">
                       <Timer finishTime={(loan.loanStartedTime.toNumber() + pawnShopData.loanPeriod.toNumber()) * 1000} />
                     </div>
                     <button
                       disabled={(new Date().getTime() > (loan.loanStartedTime.toNumber() + pawnShopData.loanPeriod.toNumber()) * 1000 && !loan.paybacked)}
-                      className="p-2 border border-black rounded-md text-[16px]"
+                      className="p-2 border border-white rounded-md text-[16px]"
                       onClick={() => payback(loan)}
                     >
-                      Payback
+                      {(new Date().getTime() > (loan.loanStartedTime.toNumber() + pawnShopData.loanPeriod.toNumber()) * 1000 && !loan.paybacked) ? 'Defaulted' : 'Payback'}
                     </button>
                   </div>
                 ))}

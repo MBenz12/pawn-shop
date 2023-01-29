@@ -597,7 +597,7 @@ export default function Home() {
   }, [wallet.publicKey, connection]);
 
   return (
-    <div className="flex flex-col mx-5">
+    <div className="flex flex-col mx-5 text-black">
       <div className="flex justify-center my-5">
         {
           !wallet.publicKey ? <WalletModalButton /> : <WalletMultiButton />
@@ -698,15 +698,15 @@ export default function Home() {
                 </button>
               </div>
               <div className="w-full mx-5">
-                <div className="w-full grid xl:grid-cols-6 md:grid-cols-4 sm:grid-cols-2 grid-cols-1 gap-4">
+                <div className="w-full grid xl:grid-cols-5 md:grid-cols-3 sm:grid-cols-2 grid-cols-1 gap-4">
                   {loans.map((loan, index) => (
                     <div key={loan.key.toString()} className="flex flex-col gap-2 p-1 rounded-md border border-black">
                       <div className="flex justify-center items-center text-center text-[20px] font-semibold h-[24px]">{nfts[index] && nfts[index].name}</div>
-                      <div className="flex items-center h-[300px]">
-                        <img src={nfts[index] && nfts[index].image} alt="" />
+                      <div className="flex items-center justify-center">
+                        <img src={nfts[index] && nfts[index].image} alt="" className="w-full object-contain"/>
                       </div>
                       <div className="flex items-center justify-center text-center text-[18px]">Owner: {loan.owner.toString().slice(0, 4) + "..." + loan.owner.toString().slice(-4)}</div>
-                      <div className="flex items-center justify-center text-center text-[20px] font-semibold">{loan.loanAmount.toNumber() / LAMPORTS_PER_SOL} SOL</div>
+                      <div className="flex items-center justify-center text-center text-[20px] font-semibold">{(loan.loanAmount.toNumber() / LAMPORTS_PER_SOL).toLocaleString('en-us', { maximumFractionDigits: 3 })} SOL</div>
                       <div className="flex justify-center">
                         <Timer finishTime={(loan.loanStartedTime.toNumber() + pawnShopData.loanPeriod.toNumber()) * 1000} />
                       </div>

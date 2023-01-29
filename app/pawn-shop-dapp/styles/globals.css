@@ -3,5 +3,41 @@
 @tailwind utilities;
 
 .wallet-adapter-button-trigger {
-    background-color: #512da8;
+    /* background-color: #512da8; */
+}
+
+body {
+    background-image: url(/background.svg);
+    background-color: #383942;
+    color: white;
+}
+
+.wallet-adapter-button.custom-connect-style {
+    background-color: #4059e7;
+    color: white;
+    height: 40px;
+    border: 1px solid #ffffff14;
+    
+    border-radius: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+    z-index: 2;
+
+    font-size: 14px;
+    font-weight: 400;
+    line-height: 1.5;
+    text-align: center;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+.wallet-adapter-modal-button-close{
+    width: inherit !important;
+}
+
+.wallet-adapter-modal-title{
+    color: white !important;
+    font-family: inherit !important;
 }
