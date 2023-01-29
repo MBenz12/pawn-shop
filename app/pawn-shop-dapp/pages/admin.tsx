@@ -4,11 +4,13 @@ import { AnchorProvider, BN, Program, Wallet } from "@project-serum/anchor";
 import { useAnchorWallet, useConnection, useWallet } from "@solana/wallet-adapter-react";
 import { WalletModalButton, WalletMultiButton } from "@solana/wallet-adapter-react-ui";
 import { IDL } from "idl/pawn_shop";
+import { IDL as AuctionIDL } from "idl/auction";
 import idl from "idl/pawn_shop.json";
+import auctionIdl from "idl/auction.json";
 import { useEffect, useState } from "react";
 import { toast } from "react-toastify";
 import { LAMPORTS_PER_SOL, PublicKey, SystemProgram, SYSVAR_RENT_PUBKEY, Transaction } from "@solana/web3.js";
-import { getAta, getLoanAddress, getMetaplex, getPawnShopAddress } from "utils";
+import { getAta, getAuctionAddress, getFloorPrice, getGlobalAddress, getLoanAddress, getMetaplex, getPawnShopAddress } from "utils";
 import { ASSOCIATED_TOKEN_PROGRAM_ID, TOKEN_PROGRAM_ID } from "@solana/spl-token";
 import { Collection, LoanData, NftData, PawnShopData } from "utils/types";
 import axios from "axios";
@@ -33,11 +35,227 @@ export default function Home() {
   const [collections, setCollections] = useState<Collection[]>([]);
   const [collectionAddress, setCollectionAddress] = useState('');
   const [percent, setPercent] = useState(0);
+  const [globalData, setGlobalData] = useState<any>();
+  const [fee, setFee] = useState(3);
+  const [minPercent, setMinPercent] = useState(50);
+  const [decreaseInterval, setDecreaseInterval] = useState(600);
+  const [decreasePercent, setDecreasePercent] = useState(1);
 
   const getProgramAndProvider = () => {
     const provider = new AnchorProvider(connection, anchorWallet as Wallet, AnchorProvider.defaultOptions());
     const program = new Program(IDL, idl.metadata.address, provider);
-    return { program, provider };
+    const auctionProgram = new Program(AuctionIDL, auctionIdl.metadata.address, provider);
+    return { program, auctionProgram, provider };
+  }
+
+  const createGlobal = async () => {
+    if (!wallet.publicKey || !pawnShopName) return;
+    try {
+      const { auctionProgram: program } = getProgramAndProvider();
+      const [global] = await getGlobalAddress();
+      const [pawnShop] = await getPawnShopAddress(pawnShopName);
+      const transaction = new Transaction();
+      transaction.add(
+        program.instruction.createGlobal(
+          pawnShop,
+          fee * 100,
+          decreaseInterval,
+          decreasePercent * 100,
+          minPercent * 100,
+          {
+            accounts: {
+              authority: wallet.publicKey,
+              global,
+              systemProgram: SystemProgram.programId
+            }
+          }
+        )
+      );
+      const txSignature = await wallet.sendTransaction(transaction, connection, { skipPreflight: true });
+      await connection.confirmTransaction(txSignature, "confirmed");
+      console.log(txSignature);
+      toast.success("Auction Global Created Successfully");
+      fetchData();
+    } catch (error) {
+      console.log(error);
+      toast.error("Failed");
+    }
+  }
+
+  const updateGlobal = async () => {
+    if (!wallet.publicKey || !pawnShopName) return;
+    try {
+      const { auctionProgram: program } = getProgramAndProvider();
+      const [global] = await getGlobalAddress();
+      const [pawnShop] = await getPawnShopAddress(pawnShopName);
+      const transaction = new Transaction();
+      transaction.add(
+        program.instruction.updateGlobal(
+          pawnShop,
+          fee * 100,
+          decreaseInterval,
+          decreasePercent * 100,
+          minPercent * 100,
+          {
+            accounts: {
+              authority: wallet.publicKey,
+              global,
+            }
+          }
+        )
+      );
+      const txSignature = await wallet.sendTransaction(transaction, connection, { skipPreflight: true });
+      await connection.confirmTransaction(txSignature, "confirmed");
+      console.log(txSignature);
+      toast.success("Auction Global Updated Successfully");
+      fetchData();
+    } catch (error) {
+      console.log(error);
+      toast.error("Failed");
+    }
+  }
+
+  const getWithdrawLoanInstruction = async (loanData: LoanData) => {
+    if (!wallet.publicKey || !pawnShopData) return;
+    const { program } = getProgramAndProvider();
+    const [pawnShop] = await getPawnShopAddress(pawnShopData.name);
+    const { key: loan, nftMint } = loanData;
+    const authority = wallet.publicKey;
+    const authorityNftAta = await getAta(authority, nftMint);
+    const loanNftAta = await getAta(loan, nftMint, true);
+    const transaction = new Transaction();
+    transaction.add(
+      program.instruction.withdrawLoan(
+        {
+          accounts: {
+            authority: wallet.publicKey,
+            pawnShop,
+            loan,
+            nftMint,
+            loanNftAta,
+            authorityNftAta,
+            systemProgram: SystemProgram.programId,
+            tokenProgram: TOKEN_PROGRAM_ID,
+            associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
+            rent: SYSVAR_RENT_PUBKEY,
+          }
+        }
+      )
+    );
+    return transaction;
+  }
+
+  const submitToAuction = async (loans: LoanData[]) => {
+    if (!wallet.publicKey || !wallet.signAllTransactions || !pawnShopName || !backend) return;
+    try {
+      const { auctionProgram: program } = getProgramAndProvider();
+      const txns = [];
+      let cnt = 0;
+      let transaction = new Transaction();
+      for (const loan of loans) {
+        // const floorPrice = await getFloorPrice(nftMint);
+        const [global] = await getGlobalAddress();
+        const nftMint = loan.nftMint;
+        const [auction] = await getAuctionAddress(nftMint);
+        const auctionData = await program.account.auction.fetchNullable(auction);
+        if (auctionData && (!auctionData.withdrawn || auctionData.finishedTime.toNumber() !== 0)) {
+          continue;
+        }
+        const creator = wallet.publicKey;
+        const creatorAta = await getAta(creator, nftMint);
+        const auctionAta = await getAta(auction, nftMint, true);
+        
+        const balance = await program.provider.connection.getTokenAccountBalance(creatorAta);
+        const withdrawLoanTx = await getWithdrawLoanInstruction(loan);
+        if (withdrawLoanTx && balance.value.uiAmount === 0) transaction.add(withdrawLoanTx);
+        transaction.add(
+          program.instruction.createAuction(
+            new BN(1 * LAMPORTS_PER_SOL),
+            {
+              accounts: {
+                creator,
+                global,
+                auction,
+                nftMint,
+                creatorAta,
+                auctionAta,
+                systemProgram: SystemProgram.programId,
+                tokenProgram: TOKEN_PROGRAM_ID,
+                associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
+                rent: SYSVAR_RENT_PUBKEY,
+              }
+            }
+          )
+        );
+        cnt += 2;
+        if (cnt % 6 === 0) {
+          txns.push(transaction);
+          transaction = new Transaction();
+        }
+      }
+      if (cnt % 6 && transaction.instructions.length) txns.push(transaction);
+      if (!txns.length) return;
+      const recentBlockhash = await (await program.provider.connection.getLatestBlockhash('finalized')).blockhash;
+      for (const transaction of txns) {
+        transaction.feePayer = wallet.publicKey;
+        transaction.recentBlockhash = recentBlockhash;
+      }
+      const signedTxns = await wallet.signAllTransactions(txns);
+      const txSignatures = [];
+      for (const signedTxn of signedTxns) {
+        const txSignature = await program.provider.connection.sendRawTransaction(signedTxn.serialize(), { skipPreflight: true });
+        txSignatures.push(txSignature);
+      }
+      for (const txSignature of txSignatures) {
+        await program.provider.connection.confirmTransaction(txSignature, "confirmed");
+      }
+      toast.success("Auction Created Successfully");
+      fetchData();
+    } catch (error) {
+      console.log(error);
+      toast.error("Failed");
+    }
+  }
+
+  const withdraw = async (nftMint: PublicKey) => {
+    if (!wallet.publicKey || !pawnShopName) return;
+    try {
+      const { auctionProgram: program } = getProgramAndProvider();
+      const [global] = await getGlobalAddress();
+      const [auction] = await getAuctionAddress(nftMint);
+        const auctionData = await program.account.auction.fetchNullable(auction);
+        if (auctionData && (auctionData.withdrawn || auctionData.finishedTime.toNumber())) {
+          return;
+        }
+      const creator = wallet.publicKey;
+      const creatorAta = await getAta(creator, nftMint);
+      const auctionAta = await getAta(auction, nftMint, true);
+      const transaction = new Transaction();
+      transaction.add(
+        program.instruction.withdraw(
+          {
+            accounts: {
+              creator,
+              global,
+              auction,
+              nftMint,
+              auctionAta,
+              creatorAta,
+              systemProgram: SystemProgram.programId,
+              tokenProgram: TOKEN_PROGRAM_ID,
+            }
+          }
+        )
+      );
+      const txSignature = await wallet.sendTransaction(transaction, connection, { skipPreflight: true });
+      await connection.confirmTransaction(txSignature, "confirmed");
+      console.log(txSignature);
+      toast.success("PawnShop Created Successfully");
+      fetchData();
+    } catch (error) {
+      console.log(error);
+      toast.error("Failed");
+    }
   }
 
   const createPawnShop = async () => {
@@ -79,9 +297,9 @@ export default function Home() {
       const transaction = new Transaction();
       transaction.add(
         program.instruction.updatePawnShop(
-          new PublicKey(pawnShopData.authority.toString()),
+          pawnShopData.authority,
           new PublicKey(backend),
-          new BN(5 * 60),
+          new BN(loanPeriod),
           new BN(interestRate * 100),
           {
             accounts: {
@@ -201,13 +419,26 @@ export default function Home() {
   const fetchData = async () => {
     if (!wallet.publicKey) return;
     try {
-      const { program } = getProgramAndProvider();
+      const { program, auctionProgram } = getProgramAndProvider();
+      const [global] = await getGlobalAddress();
+      const globalData = await auctionProgram.account.global.fetchNullable(global);
+      setGlobalData(globalData);
+      if (globalData) {
+        setFee(globalData.fee / 100);
+        setMinPercent(globalData.minPercent / 100);
+        setDecreaseInterval(globalData.decreaseInterval);
+        setDecreasePercent(globalData.decreasePercent / 100);
+      } else {
+        setFee(3);
+        setMinPercent(50);
+        setDecreaseInterval(600);
+        setDecreasePercent(1);
+      }
       const [pawnShop] = await getPawnShopAddress(pawnShopName);
       const pawnShopAccount = await program.account.pawnShop.fetchNullable(pawnShop);
       if (pawnShopAccount) {
         const pawnShopData: PawnShopData = { ...pawnShopAccount };
         setPawnShopData(pawnShopData);
-
         setBackend(pawnShopData.backend.toString());
         setLoanPeriod(pawnShopData.loanPeriod.toNumber());
         setInterestRate(pawnShopData.interestRate.toNumber() / 100);
@@ -399,6 +630,32 @@ export default function Home() {
             </div>
           </div>
 
+          <div className="flex flex-col gap-4 items-center">
+            <div className="flex gap-2 items-center">
+              <p>Decrease Interval: </p>
+              <input type="number" value={decreaseInterval} onChange={(e) => setDecreaseInterval(parseInt(e.target.value) || 0)} className="border border-black p-2" />s
+            </div>
+            <div className="flex gap-2 items-center">
+              <p>Decrease Percent: </p>
+              <input type="number" value={decreasePercent} onChange={(e) => setDecreasePercent(parseFloat(e.target.value) || 0)} className="border border-black p-2" />%
+            </div>
+            <div className="flex gap-2 items-center">
+              <p>Min Percent of Floor Price: </p>
+              <input type="number" value={minPercent} onChange={(e) => setMinPercent(parseFloat(e.target.value) || 0)} className="border border-black p-2" />%
+            </div>
+            <div className="flex gap-2 items-center">
+              <p>Admin Fee: </p>
+              <input type="number" value={fee} onChange={(e) => setFee(parseFloat(e.target.value) || 0)} className="border border-black p-2" />%
+            </div>
+
+            <div className="flex justify-center">
+              {!globalData ?
+                <button className="border border-black p-2" onClick={createGlobal}>Create Auction Global</button> :
+                <button className="border border-black p-2" onClick={updateGlobal}>Update Auction Shop</button>
+              }
+            </div>
+          </div>
+
           <div className="flex flex-col gap-2">
             <div className="flex gap-2 items-center">
               <p>Collection: </p>
@@ -420,7 +677,7 @@ export default function Home() {
             ))}
           </div>
 
-          {pawnShopData && pawnShopData.authority.toString() === wallet.publicKey.toString() &&
+          {pawnShopData &&
             <>
               <div className="flex gap-2 items-center">
                 <p>Total Balance: {pawnShopData.totalBalance.toNumber() / LAMPORTS_PER_SOL}</p>
@@ -432,6 +689,14 @@ export default function Home() {
                 <button className="border border-black p-2" onClick={fund}>Fund</button>
               </div>
 
+              <div>
+                <button
+                  className="p-2 border border-black rounded-md text-[16px] w-full"
+                  onClick={() => submitToAuction(loans.filter(loan => !(new Date().getTime() < (loan.loanStartedTime.toNumber() + pawnShopData.loanPeriod.toNumber()) * 1000 || loan.paybacked)))}
+                >
+                  Submit All to Auction
+                </button>
+              </div>
               <div className="w-full mx-5">
                 <div className="w-full grid xl:grid-cols-6 md:grid-cols-4 sm:grid-cols-2 grid-cols-1 gap-4">
                   {loans.map((loan, index) => (
@@ -445,13 +710,28 @@ export default function Home() {
                       <div className="flex justify-center">
                         <Timer finishTime={(loan.loanStartedTime.toNumber() + pawnShopData.loanPeriod.toNumber()) * 1000} />
                       </div>
-                      <button
-                        disabled={(new Date().getTime() < (loan.loanStartedTime.toNumber() + pawnShopData.loanPeriod.toNumber()) * 1000 || loan.paybacked)}
-                        className="p-2 border border-black rounded-md text-[16px]"
-                        onClick={() => withdrawLoan(loan)}
-                      >
-                        Withdraw Loan
-                      </button>
+                      {!(new Date().getTime() < (loan.loanStartedTime.toNumber() + pawnShopData.loanPeriod.toNumber()) * 1000 || loan.paybacked) &&
+                        <div className="flex flex-col items-center justify-center gap-2">
+                          {/* <button
+                            className="p-2 border border-black rounded-md text-[16px] w-full"
+                            onClick={() => withdrawLoan(loan)}
+                          >
+                            Withdraw Loan
+                          </button> */}
+                          <button
+                            className="p-2 border border-black rounded-md text-[16px] w-full"
+                            onClick={() => submitToAuction([loan])}
+                          >
+                            Submit to Auction
+                          </button>
+                          <button
+                            className="p-2 border border-black rounded-md text-[16px] w-full"
+                            onClick={() => withdraw(loan.nftMint)}
+                          >
+                            Withdraw
+                          </button>
+                        </div>
+                      }
                     </div>
                   ))}
                 </div>

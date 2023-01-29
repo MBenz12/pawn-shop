@@ -4,16 +4,19 @@ import { AnchorProvider, Program, Wallet } from "@project-serum/anchor";
 import { useAnchorWallet, useConnection, useWallet } from "@solana/wallet-adapter-react";
 import { WalletModalButton, WalletMultiButton } from "@solana/wallet-adapter-react-ui";
 import { IDL } from "idl/pawn_shop";
+import { IDL as AuctionIDL } from "idl/auction";
 import idl from "idl/pawn_shop.json";
+import auctionIdl from "idl/auction.json";
 import { Metaplex } from "@metaplex-foundation/js";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "react-toastify";
-import { LAMPORTS_PER_SOL, SystemProgram, Transaction } from "@solana/web3.js";
+import { LAMPORTS_PER_SOL, SystemProgram, SYSVAR_RENT_PUBKEY, Transaction } from "@solana/web3.js";
 import axios from "axios";
-import { Collection, LoanData, NftData, PawnShopData } from "utils/types";
-import { getAta, getPawnShopAddress } from "utils";
+import { AuctionData, Collection, GlobalData, LoanData, NftData, PawnShopData } from "utils/types";
+import { getAta, getAuctionAddress, getGlobalAddress, getPawnShopAddress } from "utils";
 import { Timer } from "components/Timer";
-import { TOKEN_PROGRAM_ID } from "@solana/spl-token";
+import { ASSOCIATED_TOKEN_PROGRAM_ID, TOKEN_PROGRAM_ID } from "@solana/spl-token";
+import { AuctionPrice } from "components/AuctionPrice";
 
 export default function Home() {
   const wallet = useWallet();
@@ -25,12 +28,15 @@ export default function Home() {
   const [loans, setLoans] = useState<LoanData[]>([]);
   const [pawnedNfts, setPawnedNfts] = useState<NftData[]>([]);
   const [collections, setCollections] = useState<string[]>([]);
-
+  const [auctions, setAuctions] = useState<AuctionData[]>([]);
+  const [auctionNfts, setAuctionNfts] = useState<NftData[]>([]);
+  const [globalData, setGlobalData] = useState<GlobalData | null>(null);
 
   const getProgramAndProvider = () => {
     const provider = new AnchorProvider(connection, anchorWallet as Wallet, AnchorProvider.defaultOptions());
     const program = new Program(IDL, idl.metadata.address, provider);
-    return { program, provider };
+    const auctionProgram = new Program(AuctionIDL, auctionIdl.metadata.address, provider);
+    return { program, provider, auctionProgram };
   }
 
   const pawn = async (nft: NftData) => {
@@ -93,6 +99,50 @@ export default function Home() {
     }
   };
 
+  const bid = async (auctionData: AuctionData) => {
+    if (!wallet.publicKey || !globalData) return;
+    try {
+      const { auctionProgram: program } = getProgramAndProvider();
+      const [global] = await getGlobalAddress();
+      const nftMint = auctionData.nftMint;
+      const [auction] = await getAuctionAddress(nftMint);
+      const bidder = wallet.publicKey;
+      const bidderAta = await getAta(bidder, nftMint);
+      const auctionAta = await getAta(auction, nftMint, true);
+      const feeWallet = globalData.authority;
+      const pawnShopPool = globalData.pawnShopPool;
+      const transaction = new Transaction();
+      transaction.add(
+        program.instruction.bid(
+          {
+            accounts: {
+              bidder,
+              feeWallet,
+              pawnShopPool,
+              global,
+              auction,
+              nftMint,
+              auctionAta,
+              bidderAta,
+              systemProgram: SystemProgram.programId,
+              tokenProgram: TOKEN_PROGRAM_ID,
+              associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
+              rent: SYSVAR_RENT_PUBKEY
+            }
+          }
+        )
+      );
+      const txSignature = await wallet.sendTransaction(transaction, connection, { skipPreflight: true });
+      await connection.confirmTransaction(txSignature, "confirmed");
+      console.log(txSignature);
+      toast.success("PawnShop Created Successfully");
+      fetchAuctions();
+    } catch (error) {
+      console.log(error);
+      toast.error("Failed");
+    }
+  }
+
   const fetchWalletNfts = async () => {
     if (!wallet.publicKey) return;
     try {
@@ -125,6 +175,21 @@ export default function Home() {
       toast.error("Failed to fetch NFTs");
     }
   };
+
+  const fetchAuctions = async () => {
+    if (!wallet.publicKey) return;
+    try {
+      const { auctionProgram: program } = getProgramAndProvider();
+      const [global] = await getGlobalAddress();
+      const globalData = await program.account.global.fetchNullable(global);
+      setGlobalData(globalData);
+      const auctions = await program.account.auction.all();
+      setAuctions(auctions.map(auction => auction.account).filter(auction => !auction.withdrawn));
+    } catch (error) {
+      console.log(error);
+      toast.error("Failed");
+    }
+  }
 
   const fetchLoans = async () => {
     if (!wallet.publicKey) return;
@@ -173,9 +238,35 @@ export default function Home() {
     fetchPawnedNfts();
   }, [loans]);
 
+
+  const fetchAuctionNfts = async () => {
+    const nfts = await Promise.all(
+      auctions.map(async (auction) => {
+        const mintAddress = auction.nftMint;
+        const nft = await metaplex.nfts().findByMint({ mintAddress });
+        const { name, symbol, uri } = nft;
+        const nftData: NftData = { address: mintAddress, name, symbol, image: '', loanAmount: 0 };
+        try {
+          const { data: { image } } = await axios.get(uri);
+          nftData.image = image;
+        } catch (error) {
+          console.log(error);
+        }
+        return nftData;
+      })
+    );
+
+    setAuctionNfts(nfts);
+  }
+
+  useEffect(() => {
+    fetchAuctionNfts();
+  }, [auctions]);
+
   useEffect(() => {
     fetchWalletNfts();
     fetchLoans();
+    fetchAuctions();
     if (!wallet.publicKey) {
       setLoans([]);
       setNfts([]);
@@ -249,6 +340,29 @@ export default function Home() {
               </div>
             </div>
           }
+
+          <div className="flex flex-col gap-5">
+            <div className="text-center text-[20px] font-bold">Auctions</div>
+            <div className="w-full grid xl:grid-cols-6 md:grid-cols-4 sm:grid-cols-2 grid-cols-1 gap-4">
+              {auctions.map((auction, index) => (
+                <div key={auction.nftMint.toString() + "auction"} className="flex flex-col gap-2 p-1 rounded-md border border-black">
+                  <div className="flex justify-center items-center text-center text-[20px] font-semibold h-[24px]">{auctionNfts[index] && auctionNfts[index].name}</div>
+                  <div className="flex items-center h-[300px]">
+                    <img src={auctionNfts[index] && auctionNfts[index].image} alt="" />
+                  </div>
+                  <AuctionPrice auction={auction} global={globalData} />
+                  {auction.finishedTime.toNumber() === 0 &&
+                    <button
+                      className="p-2 border border-black rounded-md text-[16px]"
+                      onClick={() => bid(auction)}
+                    >
+                      Bid
+                    </button>
+                  }
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       )}
     </div>

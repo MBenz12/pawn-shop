@@ -33,3 +33,25 @@ export type Collection = {
     address: string;
     percent: number;
 }
+
+export type AuctionData = {
+    nftMint: PublicKey;
+    startedTime: BN;
+    startPrice: BN;
+    winner: PublicKey;
+    soldPrice: BN;
+    earnedAmount: BN;
+    finishedTime: BN;
+    withdrawn: boolean;
+    bump: number;
+}
+
+export type GlobalData = {
+    authority: PublicKey;
+    pawnShopPool: PublicKey;
+    fee: number;
+    decreaseInterval: number;
+    decreasePercent: number;
+    minPercent: number;
+    bump: number;
+}
