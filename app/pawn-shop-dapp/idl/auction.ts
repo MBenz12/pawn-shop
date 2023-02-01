@@ -41,6 +41,10 @@ export type Auction = {
         {
           "name": "minPercent",
           "type": "u16"
+        },
+        {
+          "name": "maxDuration",
+          "type": "u32"
         }
       ]
     },
@@ -78,6 +82,10 @@ export type Auction = {
         {
           "name": "minPercent",
           "type": "u16"
+        },
+        {
+          "name": "maxDuration",
+          "type": "u32"
         }
       ]
     },
@@ -253,6 +261,27 @@ export type Auction = {
         }
       ],
       "args": []
+    },
+    {
+      "name": "closePda",
+      "accounts": [
+        {
+          "name": "signer",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "pda",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": []
     }
   ],
   "accounts": [
@@ -284,6 +313,10 @@ export type Auction = {
           {
             "name": "minPercent",
             "type": "u16"
+          },
+          {
+            "name": "maxDuration",
+            "type": "u32"
           },
           {
             "name": "bump",
@@ -347,6 +380,11 @@ export type Auction = {
       "code": 6001,
       "name": "AlreadyWithdrawn",
       "msg": "Already Withdrawn"
+    },
+    {
+      "code": 6002,
+      "name": "MaxDuration",
+      "msg": "Exceed Max Duration"
     }
   ]
 };
@@ -394,6 +432,10 @@ export const IDL: Auction = {
         {
           "name": "minPercent",
           "type": "u16"
+        },
+        {
+          "name": "maxDuration",
+          "type": "u32"
         }
       ]
     },
@@ -431,6 +473,10 @@ export const IDL: Auction = {
         {
           "name": "minPercent",
           "type": "u16"
+        },
+        {
+          "name": "maxDuration",
+          "type": "u32"
         }
       ]
     },
@@ -606,6 +652,27 @@ export const IDL: Auction = {
         }
       ],
       "args": []
+    },
+    {
+      "name": "closePda",
+      "accounts": [
+        {
+          "name": "signer",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "pda",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": []
     }
   ],
   "accounts": [
@@ -637,6 +704,10 @@ export const IDL: Auction = {
           {
             "name": "minPercent",
             "type": "u16"
+          },
+          {
+            "name": "maxDuration",
+            "type": "u32"
           },
           {
             "name": "bump",
@@ -700,6 +771,11 @@ export const IDL: Auction = {
       "code": 6001,
       "name": "AlreadyWithdrawn",
       "msg": "Already Withdrawn"
+    },
+    {
+      "code": 6002,
+      "name": "MaxDuration",
+      "msg": "Exceed Max Duration"
     }
   ]
 };

@@ -40,6 +40,7 @@ export default function Home() {
   const [minPercent, setMinPercent] = useState(50);
   const [decreaseInterval, setDecreaseInterval] = useState(600);
   const [decreasePercent, setDecreasePercent] = useState(1);
+  const [maxDuration, setMaxDuration] = useState(48 * 3600);
 
   const getProgramAndProvider = () => {
     const provider = new AnchorProvider(connection, anchorWallet as Wallet, AnchorProvider.defaultOptions());
@@ -62,6 +63,7 @@ export default function Home() {
           decreaseInterval,
           decreasePercent * 100,
           minPercent * 100,
+          maxDuration,
           {
             accounts: {
               authority: wallet.publicKey,
@@ -75,6 +77,32 @@ export default function Home() {
       await connection.confirmTransaction(txSignature, "confirmed");
       console.log(txSignature);
       toast.success("Auction Global Created Successfully");
+      fetchData();
+    } catch (error) {
+      console.log(error);
+      toast.error("Failed");
+    }
+  }
+
+  const closeGlobal = async () => {
+    if (!wallet.publicKey || !pawnShopName) return;
+    try {
+      const { auctionProgram: program } = getProgramAndProvider();
+      const [global] = await getGlobalAddress();
+      const transaction = new Transaction();
+      transaction.add(
+        program.instruction.closePda({
+          accounts: {
+            signer: wallet.publicKey,
+            pda: global,
+            systemProgram: SystemProgram.programId
+          }
+        })
+      );
+      const txSignature = await wallet.sendTransaction(transaction, connection, { skipPreflight: true });
+      await connection.confirmTransaction(txSignature, "confirmed");
+      console.log(txSignature);
+      toast.success("Auction Global Closed Successfully");
       fetchData();
     } catch (error) {
       console.log(error);
@@ -96,6 +124,7 @@ export default function Home() {
           decreaseInterval,
           decreasePercent * 100,
           minPercent * 100,
+          maxDuration,
           {
             accounts: {
               authority: wallet.publicKey,
@@ -428,11 +457,13 @@ export default function Home() {
         setMinPercent(globalData.minPercent / 100);
         setDecreaseInterval(globalData.decreaseInterval);
         setDecreasePercent(globalData.decreasePercent / 100);
+        setMaxDuration(globalData.maxDuration);
       } else {
         setFee(3);
         setMinPercent(50);
         setDecreaseInterval(600);
         setDecreasePercent(1);
+        setMaxDuration(48 * 3600);
       }
       const [pawnShop] = await getPawnShopAddress(pawnShopName);
       const pawnShopAccount = await program.account.pawnShop.fetchNullable(pawnShop);
@@ -644,6 +675,10 @@ export default function Home() {
               <input type="number" value={minPercent} onChange={(e) => setMinPercent(parseFloat(e.target.value) || 0)} className="border border-black p-2" />%
             </div>
             <div className="flex gap-2 items-center">
+              <p>Max Duration: </p>
+              <input type="number" value={maxDuration} onChange={(e) => setMaxDuration(parseInt(e.target.value) || 0)} className="border border-black p-2" />s
+            </div>
+            <div className="flex gap-2 items-center">
               <p>Admin Fee: </p>
               <input type="number" value={fee} onChange={(e) => setFee(parseFloat(e.target.value) || 0)} className="border border-black p-2" />%
             </div>
@@ -653,6 +688,7 @@ export default function Home() {
                 <button className="border border-black p-2" onClick={createGlobal}>Create Auction Global</button> :
                 <button className="border border-black p-2" onClick={updateGlobal}>Update Auction Shop</button>
               }
+              <button className="border border-black p-2" onClick={closeGlobal}>Close Global</button>
             </div>
           </div>
 
