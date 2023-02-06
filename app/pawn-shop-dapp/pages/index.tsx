@@ -10,13 +10,14 @@ import auctionIdl from "idl/auction.json";
 import { Metaplex } from "@metaplex-foundation/js";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "react-toastify";
-import { LAMPORTS_PER_SOL, SystemProgram, SYSVAR_RENT_PUBKEY, Transaction } from "@solana/web3.js";
+import { Connection, LAMPORTS_PER_SOL, SystemProgram, SYSVAR_RENT_PUBKEY, Transaction } from "@solana/web3.js";
 import axios from "axios";
 import { AuctionData, Collection, GlobalData, LoanData, NftData, PawnShopData } from "utils/types";
 import { getAta, getAuctionAddress, getGlobalAddress, getPawnShopAddress } from "utils";
 import { Timer } from "components/Timer";
 import { ASSOCIATED_TOKEN_PROGRAM_ID, TOKEN_PROGRAM_ID } from "@solana/spl-token";
 import { AuctionPrice } from "components/AuctionPrice";
+import { SOLANA_RPC_URL } from "config";
 
 export default function Home() {
   const wallet = useWallet();
@@ -31,6 +32,7 @@ export default function Home() {
   const [auctions, setAuctions] = useState<AuctionData[]>([]);
   const [auctionNfts, setAuctionNfts] = useState<NftData[]>([]);
   const [globalData, setGlobalData] = useState<GlobalData | null>(null);
+  const [differTime, setDifferTime] = useState(0);
 
   const getProgramAndProvider = () => {
     const provider = new AnchorProvider(connection, anchorWallet as Wallet, AnchorProvider.defaultOptions());
@@ -235,6 +237,13 @@ export default function Home() {
     setPawnedNfts(nfts);
   }
 
+  const getBlockTime = async () => {
+    const slot = await connection.getSlot();
+    const timeStamp = await connection.getBlockTime(slot) || 0;
+    const now = Math.floor(new Date().getTime() / 1000);
+    setDifferTime(now - timeStamp);
+  }
+
   useEffect(() => {
     fetchPawnedNfts();
   }, [loans]);
@@ -273,6 +282,7 @@ export default function Home() {
       setNfts([]);
     }
     getCollections();
+    getBlockTime();
   }, [wallet.publicKey, connection]);
 
   const getCollections = async () => {
@@ -327,14 +337,14 @@ export default function Home() {
                       Payback Amount: {((loan.loanAmount.toNumber() * (pawnShopData.interestRate.toNumber() * Math.ceil((new Date().getTime() - loan.loanStartedTime.toNumber() * 1000) / 86400 / 1000) + 100 * 100) / (100 * 100)) / LAMPORTS_PER_SOL).toLocaleString('en-us', { maximumFractionDigits: 3 })} SOL
                     </div>
                     <div className="flex justify-center">
-                      <Timer finishTime={(loan.loanStartedTime.toNumber() + pawnShopData.loanPeriod.toNumber()) * 1000} />
+                      <Timer differTime={differTime} finishTime={(loan.loanStartedTime.toNumber() + pawnShopData.loanPeriod.toNumber()) * 1000} />
                     </div>
                     <button
-                      disabled={(new Date().getTime() > (loan.loanStartedTime.toNumber() + pawnShopData.loanPeriod.toNumber()) * 1000 && !loan.paybacked)}
+                      disabled={(new Date().getTime() - differTime * 1000 > (loan.loanStartedTime.toNumber() + pawnShopData.loanPeriod.toNumber()) * 1000 && !loan.paybacked)}
                       className="p-2 border border-white rounded-md text-[16px]"
                       onClick={() => payback(loan)}
                     >
-                      {(new Date().getTime() > (loan.loanStartedTime.toNumber() + pawnShopData.loanPeriod.toNumber()) * 1000 && !loan.paybacked) ? 'Defaulted' : 'Payback'}
+                      {(new Date().getTime() - differTime * 1000 > (loan.loanStartedTime.toNumber() + pawnShopData.loanPeriod.toNumber()) * 1000 && !loan.paybacked) ? 'Defaulted' : 'Payback'}
                     </button>
                   </div>
                 ))}
@@ -351,7 +361,7 @@ export default function Home() {
                   <div className="flex items-center h-[300px]">
                     <img src={auctionNfts[index] && auctionNfts[index].image} alt="" />
                   </div>
-                  <AuctionPrice auction={auction} global={globalData} />
+                  <AuctionPrice differTime={differTime} auction={auction} global={globalData} />
                   {auction.finishedTime.toNumber() === 0 &&
                     <button
                       className="p-2 border border-black rounded-md text-[16px]"

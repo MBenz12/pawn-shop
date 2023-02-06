@@ -41,6 +41,7 @@ export default function Home() {
   const [decreaseInterval, setDecreaseInterval] = useState(600);
   const [decreasePercent, setDecreasePercent] = useState(1);
   const [maxDuration, setMaxDuration] = useState(48 * 3600);
+  const [differTime, setDifferTime] = useState(0);
 
   const getProgramAndProvider = () => {
     const provider = new AnchorProvider(connection, anchorWallet as Wallet, AnchorProvider.defaultOptions());
@@ -594,6 +595,13 @@ export default function Home() {
     fetchData();
   }, [pawnShopName]);
 
+  const getBlockTime = async () => {
+    const slot = await connection.getSlot();
+    const timeStamp = await connection.getBlockTime(slot) || 0;
+    const now = Math.floor(new Date().getTime() / 1000);
+    setDifferTime(now - timeStamp);
+  }
+
   const fetchNfts = async () => {
     const nfts = await Promise.all(
       loans.map(async (loan) => {
@@ -625,6 +633,7 @@ export default function Home() {
       setLoans([]);
     }
     getCollections();
+    getBlockTime();
   }, [wallet.publicKey, connection]);
 
   return (
@@ -744,9 +753,9 @@ export default function Home() {
                       <div className="flex items-center justify-center text-center text-[18px]">Owner: {loan.owner.toString().slice(0, 4) + "..." + loan.owner.toString().slice(-4)}</div>
                       <div className="flex items-center justify-center text-center text-[20px] font-semibold">{(loan.loanAmount.toNumber() / LAMPORTS_PER_SOL).toLocaleString('en-us', { maximumFractionDigits: 3 })} SOL</div>
                       <div className="flex justify-center">
-                        <Timer finishTime={(loan.loanStartedTime.toNumber() + pawnShopData.loanPeriod.toNumber()) * 1000} />
+                        <Timer differTime={differTime} finishTime={(loan.loanStartedTime.toNumber() + pawnShopData.loanPeriod.toNumber()) * 1000} />
                       </div>
-                      {!(new Date().getTime() < (loan.loanStartedTime.toNumber() + pawnShopData.loanPeriod.toNumber()) * 1000 || loan.paybacked) &&
+                      {!(new Date().getTime() - differTime * 1000 < (loan.loanStartedTime.toNumber() + pawnShopData.loanPeriod.toNumber()) * 1000 || loan.paybacked) &&
                         <div className="flex flex-col items-center justify-center gap-2">
                           {/* <button
                             className="p-2 border border-black rounded-md text-[16px] w-full"
